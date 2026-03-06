@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contrast Pro | Advanced Filter Edition</title>
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background-color: var(--bg);
+            color: var(--text-main);
+            margin: 0;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container { max-width: 1100px; width: 100%; }
+
+        header { text-align: center; margin-bottom: 40px; }
+        h1 { font-size: 2.2rem; color: #0f172a; margin: 0; letter-spacing: -0.02em; }
+        .subtitle { color: var(--text-muted); font-size: 1.1rem; margin-top: 8px; }
+
+        .upload-zone {
+            background: var(--card-bg);
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            margin-bottom: 20px;
+            transition: 0.2s;
+        }
+
+        .upload-zone:hover { border-color: var(--primary); background: #f1f5f9; }
+        input[type="file"] { display: none; }
+
+        .toolbar {
+            background: var(--card-bg);
+            padding: 25px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            margin-bottom: 25px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            align-items: start;
+        }
+
+        @media (max-width: 768px) {
+            .toolbar { grid-template-columns: 1fr; }
+        }
+
+        .control-group { display: flex; flex-direction: column; gap: 8px; }
+        label { font-size: 0.75rem; font-weight: 800; text-transform: uppercase; color: var(--text-muted); }
+
+        select, .slider-container {
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: white;
+            font-family: inherit;
+        }
+
+        .slider-wrapper { display: flex; align-items: center; gap: 15px; }
+        input[type="range"] { flex-grow: 1; cursor: pointer; accent-color: var(--primary); }
+        .threshold-value { font-weight: bold; color: var(--primary); min-width: 30px; font-size: 1.1rem; }
+
+        /* Style for the new checkbox */
+        .checkbox-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+            margin-top: 10px;
+            cursor: pointer;
+            color: var(--text-main);
+            font-weight: 500;
+        }
+        .checkbox-wrapper input { width: 18px; height: 18px; cursor: pointer; accent-color: var(--primary); }
+
+        .stats-bar { grid-column: 1 / -1; font-size: 0.9rem; color: var(--text-muted); border-top: 1px solid var(--border); margin-top: 10px; padding-top: 15px; }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 20px;
+        }
+
+        .contrast-card {
+            background: var(--card-bg);
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.2s;
+        }
+
+        .contrast-card:hover { transform: translateY(-4px); }
+
+        .preview {
+            padding: 45px 20px;
+            font-size: 1.3rem;
+            font-weight: 700;
+            text-align: center;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .footer-info {
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #fafafa;
+        }
+
+        .color-labels { font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; }
+        .hex-code { font-family: monospace; color: var(--text-main); font-weight: bold; }
+
+        .ratio-tag {
+            background: #dcfce7;
+            color: #166534;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-weight: 800;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Contrast Pro</h1>
+        <p class="subtitle">Palette analyzer with advanced background filtering</p>
+    </header>
+
+    <label class="upload-zone">
+        <input type="file" id="fileInput" accept=".gpl">
+        <strong>Upload GIMP Palette (.gpl)</strong>
+    </label>
+
+    <div class="toolbar" id="toolbar" style="display: none;">
+        <div class="control-group">
+            <label for="colorFilter">Focus Color:</label>
+            <select id="colorFilter">
+                <option value="all">All Colors</option>
+            </select>
+            
+            <label class="checkbox-wrapper" id="bgOnlyWrapper" style="display: none;">
+                <input type="checkbox" id="bgOnlyCheckbox">
+                Show as Background only
+            </label>
+        </div>
+
+        <div class="control-group">
+            <label for="contrastSlider">Contrast Threshold:</label>
+            <div class="slider-wrapper">
+                <input type="range" id="contrastSlider" min="1" max="21" step="0.1" value="5.3">
+                <span class="threshold-value" id="sliderVal">5.3</span>
+            </div>
+        </div>
+
+        <div id="statsBar" class="stats-bar"></div>
+    </div>
+
+    <div id="resultGrid" class="grid"></div>
+</div>
+
+<script>
+    const fileInput = document.getElementById('fileInput');
+    const resultGrid = document.getElementById('resultGrid');
+    const statsBar = document.getElementById('statsBar');
+    const colorFilter = document.getElementById('colorFilter');
+    const contrastSlider = document.getElementById('contrastSlider');
+    const sliderVal = document.getElementById('sliderVal');
+    const toolbar = document.getElementById('toolbar');
+    const bgOnlyWrapper = document.getElementById('bgOnlyWrapper');
+    const bgOnlyCheckbox = document.getElementById('bgOnlyCheckbox');
+
+    let allColors = [];
+
+    function rgbToHex(r, g, b) {
+        return "#" + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join("").toUpperCase();
+    }
+
+    function getLuminance(r, g, b) {
+        const a = [r, g, b].map(v => {
+            v /= 255;
+            return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+        });
+        return a[0] * 0.2126 + a[1] * 0.7152 + a[2] * 0.0722;
+    }
+
+    function getContrastRatio(c1, c2) {
+        const l1 = getLuminance(c1.r, c1.g, c1.b);
+        const l2 = getLuminance(c2.r, c2.g, c2.b);
+        return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+    }
+
+    fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            allColors = parseGpl(event.target.result);
+            populateFilter(allColors);
+            processAndDisplay();
+            toolbar.style.display = 'grid';
+        };
+        reader.readAsText(file);
+    });
+
+    contrastSlider.addEventListener('input', (e) => {
+        sliderVal.textContent = e.target.value;
+        processAndDisplay();
+    });
+    
+    colorFilter.addEventListener('change', () => {
+        // Show/Hide checkbox based on selection
+        if (colorFilter.value === 'all') {
+            bgOnlyWrapper.style.display = 'none';
+            bgOnlyCheckbox.checked = false; // Reset when switching to all
+        } else {
+            bgOnlyWrapper.style.display = 'flex';
+        }
+        processAndDisplay();
+    });
+
+    bgOnlyCheckbox.addEventListener('change', processAndDisplay);
+
+    function parseGpl(text) {
+        return text.split('\n')
+            .filter(line => line.trim() && !line.startsWith('GIMP') && !line.startsWith('#'))
+            .map((line, index) => {
+                const parts = line.trim().split(/\s+/);
+                const r = parseInt(parts[0]), g = parseInt(parts[1]), b = parseInt(parts[2]);
+                return {
+                    id: index,
+                    r, g, b,
+                    rgbCss: `rgb(${r},${g},${b})`,
+                    hex: rgbToHex(r, g, b),
+                    name: parts.slice(3).join(' ') || `Color ${index}`
+                };
+            }).filter(c => !isNaN(c.r));
+    }
+
+    function populateFilter(colors) {
+        colorFilter.innerHTML = '<option value="all">All Colors</option>';
+        colors.forEach(color => {
+            const opt = document.createElement('option');
+            opt.value = color.id;
+            opt.textContent = `${color.name} (${color.hex})`;
+            colorFilter.appendChild(opt);
+        });
+    }
+
+    function processAndDisplay() {
+        if (allColors.length === 0) return;
+        resultGrid.innerHTML = '';
+        const threshold = parseFloat(contrastSlider.value);
+        const selectedId = colorFilter.value;
+        const bgOnly = bgOnlyCheckbox.checked;
+        let totalCards = 0;
+
+        for (let i = 0; i < allColors.length; i++) {
+            for (let j = i + 1; j < allColors.length; j++) {
+                const c1 = allColors[i];
+                const c2 = allColors[j];
+
+                // Основен филтър за избран цвят
+                if (selectedId !== 'all') {
+                    if (c1.id != selectedId && c2.id != selectedId) continue;
+                }
+
+                const ratio = getContrastRatio(c1, c2);
+
+                if (ratio >= threshold) {
+                    // Генерираме двата варианта
+                    const variants = [
+                        { fg: c1, bg: c2 },
+                        { fg: c2, bg: c1 }
+                    ];
+
+                    variants.forEach(variant => {
+                        // Ако "Background only" е маркиран, проверяваме дали избраният цвят е фон
+                        if (bgOnly && selectedId !== 'all') {
+                            if (variant.bg.id != selectedId) return;
+                        }
+                        
+                        renderCard(variant.fg, variant.bg, ratio);
+                        totalCards++;
+                    });
+                }
+            }
+        }
+        statsBar.innerHTML = `Found <strong>${allColors.length}</strong> colors. Showing <strong>${totalCards}</strong> visual combinations.`;
+    }
+
+    function renderCard(fg, bg, ratio) {
+        const card = document.createElement('div');
+        card.className = 'contrast-card';
+        card.innerHTML = `
+            <div class="preview" style="background-color: ${bg.rgbCss}; color: ${fg.rgbCss};">
+                Aa Sample Text
+            </div>
+            <div class="footer-info">
+                <div class="color-labels">
+                    <strong>Text:</strong> ${fg.name} <span class="hex-code">(${fg.hex})</span><br>
+                    <strong>Bg:</strong> ${bg.name} <span class="hex-code">(${bg.hex})</span>
+                </div>
+                <div class="ratio-tag">${ratio.toFixed(2)}</div>
+            </div>
+        `;
+        resultGrid.appendChild(card);
+    }
+</script>
+
+</body>
+</html>
